@@ -2,8 +2,11 @@
   "name": "hf-image-gen",
   "version": "1.0.0",
   "private": true,
-  "description": "Serverless endpoint for image generation via Hugging Face Inference API",
+  "description": "Serverless endpoint for image generation via Hugging Face Inference Providers",
   "scripts": {
     "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@huggingface/inference": "^3.6.1"
   }
 }
