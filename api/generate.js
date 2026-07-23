@@ -17,9 +17,11 @@ export default async function handler(req, res) {
     return;
   }
 
-  // FLUX.1-schnell — быстрая, бесплатная (в рамках лимитов HF) модель генерации картинок
+  // FLUX.1-schnell — быстрая, бесплатная (в рамках лимитов HF) модель генерации картинок.
+  // ВАЖНО: Hugging Face полностью отключили старый api-inference.huggingface.co,
+  // теперь все запросы идут через router.huggingface.co
   const MODEL_URL =
-    "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell";
+    "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell";
 
   try {
     const hfResponse = await fetch(MODEL_URL, {
