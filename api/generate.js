@@ -1,6 +1,10 @@
 // api/generate.js
 // Serverless-функция для Vercel: принимает промпт, дёргает Hugging Face
-// Inference API с токеном из переменных окружения, отдаёт готовую картинку.
+// Inference Providers через официальный SDK @huggingface/inference —
+// он сам выбирает провайдера (fal-ai/replicate/together) и разруливает
+// очередь генерации внутри себя, отдаёт готовую картинку.
+
+import { InferenceClient } from "@huggingface/inference";
 
 export default async function handler(req, res) {
   const prompt = req.query.prompt;
@@ -17,36 +21,24 @@ export default async function handler(req, res) {
     return;
   }
 
-  // FLUX.1-schnell — быстрая, бесплатная (в рамках лимитов HF) модель генерации картинок.
-  // ВАЖНО: Hugging Face полностью отключили старый api-inference.huggingface.co,
-  // теперь все запросы идут через router.huggingface.co
-  const MODEL_URL =
-    "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell";
-
   try {
-    const hfResponse = await fetch(MODEL_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${HF_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ inputs: prompt }),
+    const client = new InferenceClient(HF_TOKEN);
+
+    // provider: "fal-ai" — стабильный бесплатный (в рамках лимитов) провайдер
+    // для FLUX.1-schnell на данный момент
+    const imageBlob = await client.textToImage({
+      model: "black-forest-labs/FLUX.1-schnell",
+      inputs: prompt,
+      provider: "fal-ai",
     });
 
-    if (!hfResponse.ok) {
-      const errText = await hfResponse.text();
-      res.status(hfResponse.status).json({ error: errText });
-      return;
-    }
-
-    const contentType = hfResponse.headers.get("content-type") || "image/jpeg";
-    const arrayBuffer = await hfResponse.arrayBuffer();
+    const arrayBuffer = await imageBlob.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Type", imageBlob.type || "image/jpeg");
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.status(200).send(buffer);
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    res.status(500).json({ error: String(err.message || err) });
   }
 }
